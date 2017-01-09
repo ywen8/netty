@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.PortUnreachableException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
@@ -141,6 +142,9 @@ public class Socket extends FileDescriptor {
         if (res >= 0) {
             return res;
         }
+        if (res == Errors.ERROR_ECONNREFUSED_NEGATIVE) {
+            throw new PortUnreachableException("sendto failed");
+        }
         return ioResult("sendTo", res, SEND_TO_CONNECTION_RESET_EXCEPTION, SEND_TO_CLOSED_CHANNEL_EXCEPTION);
     }
 
@@ -162,6 +166,9 @@ public class Socket extends FileDescriptor {
         if (res >= 0) {
             return res;
         }
+        if (res == Errors.ERROR_ECONNREFUSED_NEGATIVE) {
+            throw new PortUnreachableException("sendto failed");
+        }
         return ioResult("sendToAddress", res,
                 SEND_TO_ADDRESS_CONNECTION_RESET_EXCEPTION, SEND_TO_ADDRESS_CLOSED_CHANNEL_EXCEPTION);
     }
@@ -182,6 +189,10 @@ public class Socket extends FileDescriptor {
         int res = sendToAddresses(fd, memoryAddress, length, address, scopeId, port);
         if (res >= 0) {
             return res;
+        }
+
+        if (res == Errors.ERROR_ECONNREFUSED_NEGATIVE) {
+            throw new PortUnreachableException("sendto failed");
         }
         return ioResult("sendToAddresses", res,
                 CONNECTION_RESET_EXCEPTION_SENDMSG, SEND_TO_ADDRESSES_CLOSED_CHANNEL_EXCEPTION);
@@ -253,6 +264,18 @@ public class Socket extends FileDescriptor {
                 return false;
             }
             throwConnectException("finishConnect", FINISH_CONNECT_REFUSED_EXCEPTION, res);
+        }
+        return true;
+    }
+
+    public final boolean disconnect() throws IOException {
+        int res = disconnect(fd);
+        if (res < 0) {
+            if (res == ERRNO_EINPROGRESS_NEGATIVE) {
+                // connect still in progress
+                return false;
+            }
+            throwConnectException("disconnect", FINISH_CONNECT_REFUSED_EXCEPTION, res);
         }
         return true;
     }
@@ -432,6 +455,7 @@ public class Socket extends FileDescriptor {
     private static native int connect(int fd, byte[] address, int scopeId, int port);
     private static native int connectDomainSocket(int fd, byte[] path);
     private static native int finishConnect(int fd);
+    private static native int disconnect(int fd);
     private static native int bind(int fd, byte[] address, int scopeId, int port);
     private static native int bindDomainSocket(int fd, byte[] path);
     private static native int listen(int fd, int backlog);
