@@ -231,8 +231,15 @@ final class HpackHuffmanDecoder {
 
         private void append(int i) {
             if (bytes.length == index) {
-                // Always just expand by INITIAL_SIZE
-                byte[] newBytes = new byte[bytes.length + initialCapacity];
+                final int newLength;
+                // Choose an expanding strategy depending on how big the buffer already is.
+                if (bytes.length >= 1024) {
+                    newLength = bytes.length + initialCapacity;
+                } else {
+                    newLength = bytes.length << 1;
+                }
+
+                byte[] newBytes = new byte[newLength];
                 System.arraycopy(bytes, 0, newBytes, 0, bytes.length);
                 bytes = newBytes;
             }
