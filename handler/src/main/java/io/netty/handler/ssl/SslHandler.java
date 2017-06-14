@@ -1117,19 +1117,23 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         discardSomeReadBytes();
 
         flushIfNeeded(ctx);
-        readIfNeeded(ctx);
+        boolean read = readIfNeeded(ctx);
 
         firedChannelRead = false;
-        ctx.fireChannelReadComplete();
+        if (!read) {
+            ctx.fireChannelReadComplete();
+        }
     }
 
-    private void readIfNeeded(ChannelHandlerContext ctx) {
+    private boolean readIfNeeded(ChannelHandlerContext ctx) {
         // If handshake is not finished yet, we need more data.
         if (!ctx.channel().config().isAutoRead() && (!firedChannelRead || !handshakePromise.isDone())) {
             // No auto-read used and no message passed through the ChannelPipeline or the handshake was not complete
             // yet, which means we need to trigger the read to ensure we not encounter any stalls.
             ctx.read();
+            return true;
         }
+        return false;
     }
 
     private void flushIfNeeded(ChannelHandlerContext ctx) {

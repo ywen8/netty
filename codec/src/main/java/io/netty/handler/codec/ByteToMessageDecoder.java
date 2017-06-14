@@ -320,8 +320,9 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             if (!ctx.channel().config().isAutoRead()) {
                 ctx.read();
             }
+        } else {
+            ctx.fireChannelReadComplete();
         }
-        ctx.fireChannelReadComplete();
     }
 
     protected final void discardSomeReadBytes() {
